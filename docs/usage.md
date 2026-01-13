@@ -247,7 +247,7 @@ click button=None model=(100,200) screen=(125,250)
 **解決策**:
 
 - IME の状態を確認（タスクバーの「A」または「あ」の表示）
-- `IME_GUIDANCE_TEMPLATE` の指示に従ってモデルが IME を切り替えているか確認
+- `GUIDANCE_TEMPLATE` の指示に従ってモデルが IME を切り替えているか確認
 - 必要に応じて手動で IME を切り替えてから再実行
 
 ### 問題: API レート制限エラー
