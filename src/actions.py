@@ -4,6 +4,7 @@
 コンピューター操作のアクション（クリック、入力、スクロールなど）を実行します。
 """
 
+import sys
 import time
 
 import pyautogui
@@ -27,16 +28,16 @@ def perform_click(
 ) -> tuple[int, int]:
     """
     指定された座標でマウスクリックを実行します。
-    
+
     モデルが返す座標を実際のスクリーン座標にスケーリングしてからクリックします。
-    
+
     Args:
         x: モデル座標系のX座標
         y: モデル座標系のY座標
         display_width: モデルのディスプレイ幅
         display_height: モデルのディスプレイ高さ
         button: クリックするボタン ("left", "right", "middle")
-    
+
     Returns:
         実際にクリックされたスクリーン座標 (px, py)
     """
@@ -63,14 +64,14 @@ def perform_double_click(
 ) -> tuple[int, int]:
     """
     指定された座標でマウスダブルクリックを実行します。
-    
+
     Args:
         x: モデル座標系のX座標
         y: モデル座標系のY座標
         display_width: モデルのディスプレイ幅
         display_height: モデルのディスプレイ高さ
         button: クリックするボタン ("left", "right", "middle")
-    
+
     Returns:
         実際にクリックされたスクリーン座標 (px, py)
     """
@@ -97,14 +98,14 @@ def perform_move(
 ) -> tuple[int, int]:
     """
     マウスカーソルを指定された座標に移動します。
-    
+
     Args:
         x: モデル座標系のX座標
         y: モデル座標系のY座標
         display_width: モデルのディスプレイ幅
         display_height: モデルのディスプレイ高さ
         duration: 移動にかける時間（秒）
-    
+
     Returns:
         実際の移動先スクリーン座標 (px, py)
     """
@@ -131,19 +132,19 @@ def perform_drag(
 ) -> tuple[int, int]:
     """
     マウスドラッグ操作を実行します。
-    
+
     指定されたパスに沿ってマウスをドラッグします。
-    
+
     Args:
         path: ドラッグパスの座標リスト [{"x": x1, "y": y1}, {"x": x2, "y": y2}, ...]
         display_width: モデルのディスプレイ幅
         display_height: モデルのディスプレイ高さ
         duration: ドラッグにかける時間（秒）
         button: ドラッグに使用するボタン
-    
+
     Returns:
         ドラッグ終了時のスクリーン座標 (px, py)
-    
+
     Raises:
         ValueError: パスが空または2点未満の場合
     """
@@ -205,7 +206,7 @@ def perform_scroll(
 ) -> tuple[int, int]:
     """
     指定された座標でスクロール操作を実行します。
-    
+
     Args:
         x: モデル座標系のX座標
         y: モデル座標系のY座標
@@ -213,7 +214,7 @@ def perform_scroll(
         display_height: モデルのディスプレイ高さ
         scroll_x: 横スクロール量
         scroll_y: 縦スクロール量
-    
+
     Returns:
         スクロール位置のスクリーン座標 (px, py)
     """
@@ -230,11 +231,11 @@ def perform_scroll(
 def perform_type(text: str, *, interval: float = 0.0) -> None:
     """
     テキストを入力します。
-    
+
     Args:
         text: 入力するテキスト
         interval: 各文字の入力間隔（秒）
-    
+
     Raises:
         ValueError: text が文字列でない場合
     """
@@ -242,13 +243,39 @@ def perform_type(text: str, *, interval: float = 0.0) -> None:
         raise ValueError("type.text must be a string")
     if not text:
         return
-    pyautogui.write(text, interval=interval)
+
+    # 日本語入力などでpyautogui.writeが失敗するケースがあるため、
+    # 可能ならクリップボード経由で貼り付けする。
+    try:
+        import pyperclip  # type: ignore
+
+        previous = None
+        try:
+            previous = pyperclip.paste()
+        except Exception:
+            previous = None
+
+        try:
+            pyperclip.copy(text)
+            time.sleep(0.02)
+            modifier = "command" if sys.platform == "darwin" else "ctrl"
+            pyautogui.hotkey(modifier, "v")
+            time.sleep(0.02)
+        finally:
+            if isinstance(previous, str):
+                try:
+                    pyperclip.copy(previous)
+                except Exception:
+                    pass
+    except Exception:
+        # クリップボードが使えない環境では従来方式にフォールバック
+        pyautogui.write(text, interval=interval)
 
 
 def perform_wait(duration_ms: int | None = None) -> None:
     """
     指定された時間だけ待機します。
-    
+
     Args:
         duration_ms: 待機時間（ミリ秒）。None または 0 以下の場合は1秒待機
     """
@@ -261,12 +288,12 @@ def perform_wait(duration_ms: int | None = None) -> None:
 def perform_keypress(keys: list[str]) -> None:
     """
     キーボードのキーを押します。
-    
+
     単一のキーの場合はpress、複数のキーの場合はhotkeyとして実行します。
-    
+
     Args:
         keys: 押すキーのリスト
-    
+
     Raises:
         ValueError: キーが指定されていない場合
     """
