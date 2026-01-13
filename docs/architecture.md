@@ -7,7 +7,7 @@
 ## ディレクトリ構造
 
 ```
-202501-computer-use-test/
+computer-use-python-demo/
 ├── computer-use-test.py      # メインエントリーポイント（後方互換性用）
 ├── src/                       # ソースコードディレクトリ
 │   ├── __init__.py           # パッケージ初期化
@@ -19,6 +19,7 @@
 │   ├── session.py            # セッション管理とログ記録
 │   ├── confirmation.py       # ユーザー確認の自動化
 │   ├── debug.py              # デバッグ情報生成
+│   ├── indicator.py          # ステータスインジケーター
 │   └── main.py               # メイン実行ロジック
 ├── docs/                      # ドキュメントディレクトリ
 │   ├── architecture.md       # アーキテクチャドキュメント
@@ -28,6 +29,7 @@
 ├── .env                       # 環境変数ファイル（Git管理外）
 ├── .env.example              # 環境変数のサンプル
 ├── requirements.txt          # Python依存関係
+├── LICENSE                   # MIT ライセンス
 └── README.md                 # プロジェクト概要
 ```
 
@@ -164,7 +166,25 @@
 **主要な関数**:
 - `save_model_debug_image()`: デバッグ画像の保存
 
-### 9. main.py - メインモジュール
+### 9. indicator.py - ステータスインジケーターモジュール
+
+**責務**: 実行状態の視覚的な表示
+
+**主要機能**:
+- 常時最前面のステータスウィンドウ表示
+- 現在のステップ、フェーズ、最後のアクションの表示
+- 経過時間の表示
+- マルチスレッドでの安全な状態更新
+- クリック透過機能（Windows）
+
+**主要なクラスと関数**:
+- `StatusIndicator`: インジケーターウィンドウの管理クラス
+- `IndicatorStatus`: 表示状態を保持するデータクラス
+- `start()`: インジケーターの開始
+- `update_status()`: 状態の更新
+- `shutdown()`: インジケーターの終了
+
+### 10. main.py - メインモジュール
 
 **責務**: アプリケーション全体の統合と実行
 
