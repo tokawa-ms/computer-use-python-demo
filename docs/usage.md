@@ -39,9 +39,9 @@ cp .env.example .env
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 
 # Azure OpenAI モデルのデプロイ名
-AZURE_OPENAI_MODEL_COMPUTER_USE=gpt-4o-computer-use
-AZURE_OPENAI_MODEL_SUMMARY=gpt-4o-mini
-AZURE_OPENAI_MODEL_CONFIRM=gpt-4o-mini
+AZURE_OPENAI_MODEL_COMPUTER_USE=computer-use-preview
+AZURE_OPENAI_MODEL_SUMMARY=gpt-4.1-mini
+AZURE_OPENAI_MODEL_CONFIRM=gpt-4.1-mini
 
 # 実行するタスク（または --message で指定）
 TARGET_MESSAGE=メモ帳を開いて「Hello, World!」と入力してください
@@ -54,19 +54,22 @@ LOG_TYPED_TEXT_IN_SESSION_SUMMARY=true
 
 このツールは `DefaultAzureCredential` を使用します。以下のいずれかの方法で認証を設定してください：
 
-**方法1: Azure CLI**
+**方法 1: Azure CLI**
+
 ```bash
 az login
 ```
 
-**方法2: 環境変数**
+**方法 2: 環境変数**
+
 ```env
 AZURE_CLIENT_ID=your-client-id
 AZURE_CLIENT_SECRET=your-client-secret
 AZURE_TENANT_ID=your-tenant-id
 ```
 
-**方法3: マネージドID**
+**方法 3: マネージド ID**
+
 - Azure VM または Azure App Service で実行する場合、自動的に認証されます
 
 ## 基本的な使用方法
@@ -93,19 +96,19 @@ python -m src.main --message "メモ帳を開いてください"
 
 ## 実行例
 
-### 例1: シンプルなタスク
+### 例 1: シンプルなタスク
 
 ```bash
 python computer-use-test.py --message "電卓アプリを開いて 123 + 456 を計算してください"
 ```
 
-### 例2: ファイル操作
+### 例 2: ファイル操作
 
 ```bash
 python computer-use-test.py --message "メモ帳を開いて「今日の日付」と入力し、デスクトップに test.txt として保存してください"
 ```
 
-### 例3: ブラウザ操作
+### 例 3: ブラウザ操作
 
 ```bash
 python computer-use-test.py --message "Microsoft Edgeを開いて https://www.microsoft.com にアクセスしてください"
@@ -194,6 +197,7 @@ STATUS_INDICATOR_CLICK_THROUGH=true
 - `YYYYmmdd_HHMMSS-sessionsummary.txt`: セッション全体のサマリー
 
 **ファイル例**:
+
 ```
 session_start=2024-01-15T10:30:00
 model_summary=gpt-4o-mini
@@ -219,18 +223,21 @@ click button=None model=(100,200) screen=(125,250)
 ### 問題: 環境変数が読み込まれない
 
 **解決策**:
+
 - `.env` ファイルがプロジェクトのルートディレクトリにあることを確認
 - `python-dotenv` がインストールされていることを確認: `pip install python-dotenv`
 
 ### 問題: Azure 認証エラー
 
 **解決策**:
+
 - `az login` を実行して Azure にログイン
 - または、環境変数 `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` を設定
 
 ### 問題: クリック座標がずれる
 
 **解決策**:
+
 - `src/config.py` の `DISPLAY_WIDTH` と `DISPLAY_HEIGHT` を確認
 - スクリーンの解像度を確認: `image_processing.get_primary_screen_size()` が正しい値を返すか確認
 - マルチモニター環境の場合、プライマリモニターの設定を確認
@@ -238,13 +245,15 @@ click button=None model=(100,200) screen=(125,250)
 ### 問題: 日本語入力ができない
 
 **解決策**:
+
 - IME の状態を確認（タスクバーの「A」または「あ」の表示）
-- `IME_GUIDANCE_TEMPLATE` の指示に従ってモデルがIMEを切り替えているか確認
-- 必要に応じて手動でIMEを切り替えてから再実行
+- `IME_GUIDANCE_TEMPLATE` の指示に従ってモデルが IME を切り替えているか確認
+- 必要に応じて手動で IME を切り替えてから再実行
 
 ### 問題: API レート制限エラー
 
 **解決策**:
+
 - リトライロジックが自動的に処理しますが、頻繁に発生する場合は以下を調整：
   - `src/config.py` の `MAX_API_RETRIES` を増やす
   - `INITIAL_BACKOFF_SECONDS` を増やす
@@ -257,7 +266,7 @@ click button=None model=(100,200) screen=(125,250)
 
 ### 2. 機密情報の入力を避ける
 
-パスワードやAPIキーなどの機密情報を入力するタスクは避けてください。以下の設定で記録を最小限にできます：
+パスワードや API キーなどの機密情報を入力するタスクは避けてください。以下の設定で記録を最小限にできます：
 
 ```python
 SHOW_TYPED_TEXT_IN_ANNOTATION = False
@@ -286,6 +295,7 @@ AUTO_CONFIRM_BLOCK_RISKY = True  # デフォルトで有効
 2. `src/main.py` の `execute_action()` に新しいアクションタイプを追加
 
 例：
+
 ```python
 # src/actions.py
 def perform_custom_action():
@@ -327,7 +337,7 @@ SAVE_MODEL_RESPONSE_DEBUG_IMAGE = False
 
 ### 3. セッションサマリーの無効化
 
-セッションサマリーを無効化してAPI呼び出しを削減：
+セッションサマリーを無効化して API 呼び出しを削減：
 
 ```python
 ENABLE_SESSION_SUMMARY = False
@@ -337,7 +347,7 @@ ENABLE_SESSION_SUMMARY = False
 
 **Q: このツールは Mac や Linux で動作しますか？**
 
-A: 現在は Windows 専用です。PyAutoGUI は他のOSでも動作しますが、IME関連の機能やWindows固有の動作に依存しています。
+A: 現在は Windows 専用です。PyAutoGUI は他の OS でも動作しますが、IME 関連の機能や Windows 固有の動作に依存しています。
 
 **Q: 最大ステップ数を変更できますか？**
 
@@ -349,7 +359,7 @@ A: マウスカーソルを画面の隅に移動すると、PyAutoGUI の FAILSA
 
 **Q: 複数のタスクを連続実行できますか？**
 
-A: 現在は1つのタスクのみです。複数のタスクを実行するには、スクリプトを複数回実行するか、メインループをカスタマイズしてください。
+A: 現在は 1 つのタスクのみです。複数のタスクを実行するには、スクリプトを複数回実行するか、メインループをカスタマイズしてください。
 
 ## サポート
 
