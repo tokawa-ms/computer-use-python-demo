@@ -6,6 +6,7 @@ Azure OpenAI computer-use の実行ロジックを統合します。
 """
 
 import argparse
+import shutil
 import time
 from pathlib import Path
 
@@ -90,6 +91,7 @@ def execute_action(
     step: int,
     action,
     action_type: str,
+    cycle_base_image: Path | None = None,
 ) -> Path | None:
     """
     単一のアクションを実行します。
@@ -106,6 +108,25 @@ def execute_action(
         ValueError: 無効なアクションパラメータの場合
     """
     screenshot_path: Path | None = None
+
+    def _split_stamp_and_index(path: Path) -> tuple[str, int | None]:
+        parts = (path.stem or "").split("_")
+        if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 2:
+            return ("_".join(parts[:-1]), int(parts[-1]))
+        return (path.stem, None)
+
+    def _cycle_artifact_path(
+        *, idx: int, tail: str, ext: str | None = None
+    ) -> Path | None:
+        if cycle_base_image is None:
+            return None
+        try:
+            base = Path(cycle_base_image)
+        except Exception:
+            return None
+        stamp, _ = _split_stamp_and_index(base)
+        suffix = ext if isinstance(ext, str) and ext else base.suffix
+        return base.with_name(f"{stamp}_{idx:02d}{tail}{suffix}")
 
     def _format_pointer_debug(
         *,
@@ -190,16 +211,7 @@ def execute_action(
         screenshot_path = image_processing.capture_fullscreen_screenshot(
             screenshots_dir=SCREENSHOTS_DIR
         )
-        annotated_path = image_processing.annotate_click_points(
-            screenshot_path,
-            [(x, y)],
-            display_width=DISPLAY_WIDTH,
-            display_height=DISPLAY_HEIGHT,
-        )
-        print(f"[{step}] Annotated screenshot saved: {annotated_path}")
-        screenshot_path = image_processing.choose_model_image(
-            screenshot_path, annotated_path
-        )
+        print(f"[{step}] Captured screenshot: {screenshot_path}")
 
     elif action_type == "double_click":
         # ダブルクリック操作
@@ -232,16 +244,7 @@ def execute_action(
         screenshot_path = image_processing.capture_fullscreen_screenshot(
             screenshots_dir=SCREENSHOTS_DIR
         )
-        annotated_path = image_processing.annotate_click_points(
-            screenshot_path,
-            [(x, y)],
-            display_width=DISPLAY_WIDTH,
-            display_height=DISPLAY_HEIGHT,
-        )
-        print(f"[{step}] Annotated screenshot saved: {annotated_path}")
-        screenshot_path = image_processing.choose_model_image(
-            screenshot_path, annotated_path
-        )
+        print(f"[{step}] Captured screenshot: {screenshot_path}")
 
     elif action_type == "move":
         # マウス移動操作
@@ -372,10 +375,23 @@ def execute_action(
 
         # 入力前のエビデンススクリーンショット
         if EVIDENCE_BEFORE_AFTER_FOR_INPUT:
-            before_path = image_processing.capture_fullscreen_screenshot(
-                screenshots_dir=SCREENSHOTS_DIR
-            )
-            print(f"[{step}] Evidence (before type): {before_path}")
+            dst = _cycle_artifact_path(idx=5, tail="_Evidence_BeforeType")
+            if dst is not None:
+                try:
+                    before_path = (
+                        image_processing.capture_fullscreen_screenshot_to_path(dst)
+                    )
+                    print(f"[{step}] Evidence (before type): {before_path}")
+                except Exception:
+                    before_path = image_processing.capture_fullscreen_screenshot(
+                        screenshots_dir=SCREENSHOTS_DIR
+                    )
+                    print(f"[{step}] Evidence (before type): {before_path}")
+            else:
+                before_path = image_processing.capture_fullscreen_screenshot(
+                    screenshots_dir=SCREENSHOTS_DIR
+                )
+                print(f"[{step}] Evidence (before type): {before_path}")
 
         actions.perform_type(text)
         print(f"[{step}] Typed {len(text)} chars")
@@ -391,13 +407,16 @@ def execute_action(
         after_path = image_processing.capture_fullscreen_screenshot(
             screenshots_dir=SCREENSHOTS_DIR
         )
-        note = image_processing.summarize_typed_text(text)
-        annotated_path = image_processing.annotate_text(after_path, note)
-        print(f"[{step}] Evidence (after type): {after_path}")
-        print(f"[{step}] Evidence (after type, annotated): {annotated_path}")
-        screenshot_path = image_processing.choose_model_image(
-            after_path, annotated_path
-        )
+        dst = _cycle_artifact_path(idx=6, tail="_Evidence_AfterType")
+        if dst is not None:
+            try:
+                shutil.copy2(after_path, dst)
+                print(f"[{step}] Evidence (after type): {dst}")
+            except Exception:
+                print(f"[{step}] Evidence (after type): {after_path}")
+        else:
+            print(f"[{step}] Evidence (after type): {after_path}")
+        screenshot_path = after_path
 
     elif action_type == "wait":
         # 待機操作
@@ -421,10 +440,23 @@ def execute_action(
 
         # 入力前のエビデンススクリーンショット
         if EVIDENCE_BEFORE_AFTER_FOR_INPUT:
-            before_path = image_processing.capture_fullscreen_screenshot(
-                screenshots_dir=SCREENSHOTS_DIR
-            )
-            print(f"[{step}] Evidence (before keypress): {before_path}")
+            dst = _cycle_artifact_path(idx=5, tail="_Evidence_BeforeKeypress")
+            if dst is not None:
+                try:
+                    before_path = (
+                        image_processing.capture_fullscreen_screenshot_to_path(dst)
+                    )
+                    print(f"[{step}] Evidence (before keypress): {before_path}")
+                except Exception:
+                    before_path = image_processing.capture_fullscreen_screenshot(
+                        screenshots_dir=SCREENSHOTS_DIR
+                    )
+                    print(f"[{step}] Evidence (before keypress): {before_path}")
+            else:
+                before_path = image_processing.capture_fullscreen_screenshot(
+                    screenshots_dir=SCREENSHOTS_DIR
+                )
+                print(f"[{step}] Evidence (before keypress): {before_path}")
 
         actions.perform_keypress(keys)
         print(f"[{step}] Keypress: {keys}")
@@ -437,13 +469,16 @@ def execute_action(
         after_path = image_processing.capture_fullscreen_screenshot(
             screenshots_dir=SCREENSHOTS_DIR
         )
-        note = image_processing.summarize_keypress(keys)
-        annotated_path = image_processing.annotate_text(after_path, note)
-        print(f"[{step}] Evidence (after keypress): {after_path}")
-        print(f"[{step}] Evidence (after keypress, annotated): {annotated_path}")
-        screenshot_path = image_processing.choose_model_image(
-            after_path, annotated_path
-        )
+        dst = _cycle_artifact_path(idx=6, tail="_Evidence_AfterKeypress")
+        if dst is not None:
+            try:
+                shutil.copy2(after_path, dst)
+                print(f"[{step}] Evidence (after keypress): {dst}")
+            except Exception:
+                print(f"[{step}] Evidence (after keypress): {after_path}")
+        else:
+            print(f"[{step}] Evidence (after keypress): {after_path}")
+        screenshot_path = after_path
 
     else:
         raise ValueError(f"Unsupported action type: {action_type}")
@@ -519,7 +554,9 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         print(response.output)
-        session.log_model_response_summary(step=0, response_obj=response)
+
+        # 直近でモデルに送信した（= モデルが現状把握に使った）スクリーンショット
+        last_sent_screenshot: Path | None = None
 
         # メインループ
         for step in range(1, MAX_STEPS + 1):
@@ -534,6 +571,25 @@ def main(argv: list[str] | None = None) -> int:
             if computer_call is None:
                 print("No computer call found; stopping.")
                 break
+
+            # このレスポンスが指示しているアクションをログに残す（step のズレを防ぐ）
+            session.log_model_response_summary(step=step, response_obj=response)
+            if last_sent_screenshot is not None:
+                try:
+                    parts = (last_sent_screenshot.stem or "").split("_")
+                    if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 2:
+                        stamp = "_".join(parts[:-1])
+                    else:
+                        stamp = last_sent_screenshot.stem
+                    debug_txt = last_sent_screenshot.with_name(f"{stamp}_02_Debug.txt")
+                except Exception:
+                    debug_txt = None
+                debug.save_model_debug_text(
+                    sent_image_path=last_sent_screenshot,
+                    step=step,
+                    response_obj=response,
+                    output_path=debug_txt,
+                )
 
             last_call_id = computer_call.call_id
             action = computer_call.action
@@ -554,6 +610,7 @@ def main(argv: list[str] | None = None) -> int:
                     step=step,
                     action=action,
                     action_type=action_type,
+                    cycle_base_image=last_sent_screenshot,
                 )
             except ValueError as e:
                 print(f"[{step}] {e}; stopping.")
@@ -563,6 +620,53 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[{step}] No screenshot available; stopping.")
                 break
 
+            # 直前にモデルへ送った画像（タイムスタンプ.png）を基準に、実行結果を保存
+            if last_sent_screenshot is not None and last_sent_screenshot.exists():
+                try:
+                    base = last_sent_screenshot
+                    parts = (base.stem or "").split("_")
+                    if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 2:
+                        stamp = "_".join(parts[:-1])
+                    else:
+                        stamp = base.stem
+                    debug_img = base.with_name(f"{stamp}_03_Debug{base.suffix}")
+                    debug_img_r = base.with_name(f"{stamp}_04_Debug_R{base.suffix}")
+                    shutil.copy2(screenshot_path, debug_img)
+
+                    note = session._summarize_action_for_log(action)
+
+                    points: list[tuple[int, int]] = []
+                    if action_type in ("click", "double_click", "move", "scroll"):
+                        x = getattr(action, "x", None)
+                        y = getattr(action, "y", None)
+                        if isinstance(x, int) and isinstance(y, int):
+                            points = [(x, y)]
+                    elif action_type == "drag":
+                        path = getattr(action, "path", None)
+                        if isinstance(path, list) and path:
+                            last = path[-1]
+                            if isinstance(last, dict):
+                                x = last.get("x")
+                                y = last.get("y")
+                            else:
+                                x = getattr(last, "x", None)
+                                y = getattr(last, "y", None)
+                            if isinstance(x, int) and isinstance(y, int):
+                                points = [(x, y)]
+
+                    image_processing.annotate_action_overlay(
+                        debug_img,
+                        output_path=debug_img_r,
+                        note=note,
+                        points=points,
+                        display_width=DISPLAY_WIDTH,
+                        display_height=DISPLAY_HEIGHT,
+                    )
+                    print(f"[{step}] Action screenshot saved: {debug_img}")
+                    print(f"[{step}] Action overlay saved: {debug_img_r}")
+                except Exception as e:
+                    print(f"[{step}] Failed to save action evidence: {e}")
+
             # APIに結果を送信
             status.update(
                 step=step,
@@ -570,7 +674,31 @@ def main(argv: list[str] | None = None) -> int:
                 phase="API待ち",
                 last_action=str(action_type),
             )
+            # 次ステップの基準スクショは必ず `_01` を付けて保存
             sent_image_path = screenshot_path
+            try:
+                stem_parts = (sent_image_path.stem or "").split("_")
+                if (
+                    len(stem_parts) >= 2
+                    and stem_parts[-1].isdigit()
+                    and len(stem_parts[-1]) == 2
+                ):
+                    # すでに連番付きならそのまま（念のため 01 に統一）
+                    stamp = "_".join(stem_parts[:-1])
+                else:
+                    stamp = sent_image_path.stem
+                target = sent_image_path.with_name(
+                    f"{stamp}_01{sent_image_path.suffix}"
+                )
+                if target != sent_image_path:
+                    try:
+                        sent_image_path = sent_image_path.replace(target)
+                    except Exception:
+                        shutil.copy2(sent_image_path, target)
+                        sent_image_path = target
+            except Exception:
+                pass
+
             response = client.responses_create_with_retry(
                 model=confirmation.COMPUTER_USE_MODEL,
                 previous_response_id=response.id,
@@ -582,7 +710,7 @@ def main(argv: list[str] | None = None) -> int:
                         "output": {
                             "type": "input_image",
                             "image_url": image_processing.image_file_to_data_url(
-                                screenshot_path
+                                sent_image_path
                             ),
                         },
                     }
@@ -590,18 +718,8 @@ def main(argv: list[str] | None = None) -> int:
                 truncation="auto",
             )
 
-            # レスポンスのログ記録
-            session.log_model_response_summary(step=step, response_obj=response)
-
-            # デバッグ画像の保存
-            try:
-                dbg_path = debug.save_model_debug_image(
-                    sent_image_path=sent_image_path, step=step, response_obj=response
-                )
-                if dbg_path is not None:
-                    print(f"[{step}] Debug screenshot saved: {dbg_path}")
-            except Exception as e:
-                print(f"[{step}] Failed to save debug screenshot: {e}")
+            # 次ステップの「現状把握（タイムスタンプ.png）」として保持
+            last_sent_screenshot = sent_image_path
 
             print(response.output)
 

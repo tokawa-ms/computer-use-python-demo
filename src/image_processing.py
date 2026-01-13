@@ -25,14 +25,14 @@ def image_file_to_data_url(
 ) -> str:
     """
     画像ファイルをData URLに変換します。
-    
+
     Args:
         image_path: 画像ファイルのパス
         default_mime: デフォルトのMIMEタイプ
-    
+
     Returns:
         Data URL形式の文字列
-    
+
     Raises:
         FileNotFoundError: 画像ファイルが存在しない場合
     """
@@ -52,13 +52,13 @@ def image_file_to_data_url(
 def capture_fullscreen_screenshot(*, screenshots_dir: os.PathLike | str) -> Path:
     """
     フルスクリーンのスクリーンショットを撮影します。
-    
+
     プライマリスクリーンのスクリーンショットを撮影し、
     タイムスタンプを含むファイル名で保存します。
-    
+
     Args:
         screenshots_dir: スクリーンショットの保存先ディレクトリ
-    
+
     Returns:
         保存されたスクリーンショットのパス
     """
@@ -68,6 +68,13 @@ def capture_fullscreen_screenshot(*, screenshots_dir: os.PathLike | str) -> Path
     # YYYYmmdd_HHMMSS_mmm.png 形式のタイムスタンプ
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
     out_path = out_dir / f"{ts}.png"
+    return capture_fullscreen_screenshot_to_path(out_path)
+
+
+def capture_fullscreen_screenshot_to_path(output_path: os.PathLike | str) -> Path:
+    """フルスクリーンのスクリーンショットを指定パスに保存します。"""
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     # プライマリスクリーンをキャプチャ
     # (all_screens=True を使用すると、マルチモニター環境で
@@ -80,7 +87,7 @@ def capture_fullscreen_screenshot(*, screenshots_dir: os.PathLike | str) -> Path
 def get_primary_screen_size() -> tuple[int, int]:
     """
     プライマリスクリーンのサイズを取得します。
-    
+
     Returns:
         (幅, 高さ) のタプル
     """
@@ -98,16 +105,16 @@ def annotate_click_points(
 ) -> Path:
     """
     画像にクリックポイントのアノテーションを追加します。
-    
+
     クリックされた位置に円と十字線を描画します。
-    
+
     Args:
         image_path: 元の画像のパス
         points: クリックポイントのリスト [(x, y), ...]
         output_path: 出力ファイルのパス（None の場合は自動生成）
         display_width: ディスプレイ幅（スケーリング用）
         display_height: ディスプレイ高さ（スケーリング用）
-    
+
     Returns:
         アノテーション付き画像のパス
     """
@@ -129,7 +136,7 @@ def annotate_click_points(
 
             # 画像サイズに応じた円の半径を計算
             r = max(10, int(min(img.width, img.height) * 0.012))
-            
+
             # 円を描画
             draw.ellipse(
                 (px - r, py - r, px + r, py + r), outline=(255, 0, 0, 255), width=5
@@ -151,14 +158,14 @@ def annotate_text(
 ) -> Path:
     """
     画像にテキストアノテーションを追加します。
-    
+
     画像の左上隅に半透明の黒背景でテキストを描画します。
-    
+
     Args:
         image_path: 元の画像のパス
         note: 追加するテキスト
         output_path: 出力ファイルのパス（None の場合は自動生成）
-    
+
     Returns:
         アノテーション付き画像のパス
     """
@@ -201,16 +208,81 @@ def annotate_text(
     return dst
 
 
+def annotate_action_overlay(
+    image_path: os.PathLike | str,
+    *,
+    output_path: os.PathLike | str,
+    note: str | None = None,
+    points: list[tuple[int, int]] | None = None,
+    display_width: int | None = None,
+    display_height: int | None = None,
+) -> Path:
+    """画像にアクションのエビデンス（クリック点 + テキスト）を1枚にまとめて描画します。"""
+    src = Path(image_path)
+    dst = Path(output_path)
+
+    note_text = (note or "").strip()
+    pts = points or []
+
+    with Image.open(src) as img:
+        img = img.convert("RGBA")
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        if pts:
+            scale_x = img.width / display_width if display_width else 1.0
+            scale_y = img.height / display_height if display_height else 1.0
+            for x, y in pts:
+                px = int(round(x * scale_x))
+                py = int(round(y * scale_y))
+                r = max(10, int(min(img.width, img.height) * 0.012))
+                draw.ellipse(
+                    (px - r, py - r, px + r, py + r),
+                    outline=(255, 0, 0, 255),
+                    width=5,
+                )
+                draw.line(
+                    (px - r * 2, py, px + r * 2, py),
+                    fill=(255, 0, 0, 255),
+                    width=3,
+                )
+                draw.line(
+                    (px, py - r * 2, px, py + r * 2),
+                    fill=(255, 0, 0, 255),
+                    width=3,
+                )
+
+        if note_text:
+            margin = max(10, int(min(img.width, img.height) * 0.01))
+            pad = max(8, int(min(img.width, img.height) * 0.008))
+            bbox = draw.multiline_textbbox((0, 0), note_text)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            x0 = margin
+            y0 = margin
+            x1 = min(img.width - margin, x0 + tw + pad * 2)
+            y1 = min(img.height - margin, y0 + th + pad * 2)
+            draw.rectangle((x0, y0, x1, y1), fill=(0, 0, 0, 170))
+            draw.multiline_text(
+                (x0 + pad, y0 + pad), note_text, fill=(255, 255, 255, 255)
+            )
+
+        composed = Image.alpha_composite(img, overlay)
+        composed.save(dst)
+
+    return dst
+
+
 def choose_model_image(clean: Path, annotated: Path | None = None) -> Path:
     """
     モデルに送信する画像を選択します。
-    
+
     設定に基づいて、クリーンな画像またはアノテーション付き画像を選択します。
-    
+
     Args:
         clean: クリーンな画像のパス
         annotated: アノテーション付き画像のパス
-    
+
     Returns:
         選択された画像のパス
     """
@@ -222,12 +294,12 @@ def choose_model_image(clean: Path, annotated: Path | None = None) -> Path:
 def summarize_typed_text(text: str) -> str:
     """
     タイプされたテキストをアノテーション用に要約します。
-    
+
     設定に応じて、テキストの内容を表示するか、文字数のみを表示します。
-    
+
     Args:
         text: タイプされたテキスト
-    
+
     Returns:
         アノテーション用の要約文字列
     """
@@ -244,10 +316,10 @@ def summarize_typed_text(text: str) -> str:
 def summarize_keypress(keys: list[str]) -> str:
     """
     キープレスをアノテーション用に要約します。
-    
+
     Args:
         keys: キーのリスト
-    
+
     Returns:
         アノテーション用の要約文字列
     """
@@ -263,10 +335,10 @@ def summarize_keypress(keys: list[str]) -> str:
 def extract_click_points(response_output: list) -> list[tuple[int, int]]:
     """
     レスポンスからクリックポイントを抽出します。
-    
+
     Args:
         response_output: APIレスポンスの出力リスト
-    
+
     Returns:
         クリックポイントのリスト [(x, y), ...]
     """
@@ -274,7 +346,7 @@ def extract_click_points(response_output: list) -> list[tuple[int, int]]:
     for item in response_output:
         if getattr(item, "type", None) != "computer_call":
             continue
-        
+
         action = getattr(item, "action", None)
         if getattr(action, "type", None) != "click":
             continue
