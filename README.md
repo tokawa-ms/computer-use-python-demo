@@ -13,7 +13,7 @@ Azure OpenAI の computer-use 機能を使用して Windows 環境を自動操�
 ## プロジェクト構成
 
 ```
-202501-computer-use-test/
+computer-use-python-demo/
 ├── computer-use-test.py      # メインエントリーポイント
 ├── src/                       # ソースコードディレクトリ
 │   ├── config.py             # 環境設定と定数管理
@@ -24,6 +24,7 @@ Azure OpenAI の computer-use 機能を使用して Windows 環境を自動操�
 │   ├── session.py            # セッション管理とログ記録
 │   ├── confirmation.py       # ユーザー確認の自動化
 │   ├── debug.py              # デバッグ情報生成
+│   ├── indicator.py          # ステータスインジケーター
 │   └── main.py               # メイン実行ロジック
 ├── docs/                      # ドキュメントディレクトリ
 │   ├── architecture.md       # アーキテクチャドキュメント
@@ -170,7 +171,7 @@ python -m py_compile src/*.py computer-use-test.py
 
 ## ライセンス
 
-このプロジェクトは個人的な学習と実験用です。
+このプロジェクトは MIT ライセンスの下で提供されています。詳細は [LICENSE](LICENSE) ファイルを参照してください。
 
 ## 注意事項
 

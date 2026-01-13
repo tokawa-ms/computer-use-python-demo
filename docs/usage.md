@@ -150,6 +150,32 @@ LOG_TYPED_TEXT_IN_SESSION_SUMMARY = True  # 入力テキストをログに記録
 
 **警告**: `LOG_TYPED_TEXT_IN_SESSION_SUMMARY = True` の場合、パスワードなどの機密情報がログファイルに記録される可能性があります。
 
+### ステータスインジケーター設定
+
+ステータスインジケーターを有効にすると、実行中に画面上（デフォルトは右上）に小さな常時最前面ウィンドウが表示され、現在のステップやフェーズ、経過時間などが確認できます。
+
+```env
+# .env ファイル
+ENABLE_STATUS_INDICATOR=true
+
+# 位置の調整（オプション）
+STATUS_INDICATOR_POSITION=top-right  # top-left, bottom-right, bottom-left も可能
+STATUS_INDICATOR_OFFSET_X=12
+STATUS_INDICATOR_OFFSET_Y=12
+
+# 外観の調整（オプション）
+STATUS_INDICATOR_OPACITY=0.78
+STATUS_INDICATOR_WIDTH=280
+STATUS_INDICATOR_HEIGHT=92
+STATUS_INDICATOR_FONT_FAMILY=Segoe UI
+STATUS_INDICATOR_FONT_SIZE=9
+
+# クリック透過（Windows のみ、オプション）
+STATUS_INDICATOR_CLICK_THROUGH=true
+```
+
+**クリック透過について**: Windows では `STATUS_INDICATOR_CLICK_THROUGH=true` に設定すると、インジケーターウィンドウをクリックしてもその下のウィンドウに操作が伝わります（誤クリック防止）。
+
 ## 出力ファイル
 
 ### スクリーンショット

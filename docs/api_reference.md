@@ -458,6 +458,90 @@ perform_keypress(["enter"])      # Enter
 
 ---
 
+## src.indicator モジュール
+
+### クラス: IndicatorStatus
+
+**説明**: インジケーターに表示する状態を保持するデータクラス。
+
+**属性**:
+- `step` (int): 現在のステップ番号
+- `max_steps` (int): 最大ステップ数
+- `phase` (str): 現在のフェーズ（"API 待ち"、"操作中"、"確認中" など）
+- `last_action` (str): 最後に実行したアクション
+- `started_at` (float): セッション開始時刻（Unix タイムスタンプ）
+
+---
+
+### クラス: StatusIndicator
+
+**説明**: 実行中に画面上にステータスウィンドウを表示するクラス。別スレッドで Tkinter を動かし、メインスレッドからは状態を更新するだけで動作します。
+
+#### `__init__(*, enabled: bool = True, opacity: float = 0.78, width: int = 280, height: int = 92, margin: int = 12, poll_ms: int = 120, position: str = "top-right", offset_x: int = 12, offset_y: int = 12, font_family: str = "Segoe UI", font_size: int = 9, click_through: bool = True) -> None`
+
+ステータスインジケーターを初期化します。
+
+**パラメータ**:
+- `enabled`: インジケーターを有効にするかどうか（デフォルト: True）
+- `opacity`: ウィンドウの不透明度（0.2～1.0、デフォルト: 0.78）
+- `width`: ウィンドウの幅（ピクセル、デフォルト: 280）
+- `height`: ウィンドウの高さ（ピクセル、デフォルト: 92）
+- `margin`: ウィンドウのマージン（ピクセル、デフォルト: 12）
+- `poll_ms`: 状態更新のポーリング間隔（ミリ秒、デフォルト: 120）
+- `position`: ウィンドウの位置（"top-right", "top-left", "bottom-right", "bottom-left"、デフォルト: "top-right"）
+- `offset_x`: 水平方向のオフセット（ピクセル、デフォルト: 12）
+- `offset_y`: 垂直方向のオフセット（ピクセル、デフォルト: 12）
+- `font_family`: フォントファミリー（デフォルト: "Segoe UI"）
+- `font_size`: フォントサイズ（6～48、デフォルト: 9）
+- `click_through`: クリック透過を有効にするかどうか（Windows のみ、デフォルト: True）
+
+---
+
+#### `start() -> None`
+
+インジケーターを起動します（別スレッドで実行）。
+
+**注意**: `enabled=False` の場合は何もしません。
+
+---
+
+#### `stop() -> None`
+
+インジケーターを停止します。
+
+---
+
+#### `update(*, step: int, max_steps: int, phase: str, last_action: str) -> None`
+
+表示状態を更新します。
+
+**パラメータ**:
+- `step`: 現在のステップ番号
+- `max_steps`: 最大ステップ数
+- `phase`: 現在のフェーズ
+- `last_action`: 最後に実行したアクション
+
+**例**:
+```python
+from src.indicator import StatusIndicator
+
+indicator = StatusIndicator(enabled=True)
+indicator.start()
+
+# 状態を更新
+indicator.update(
+    step=1,
+    max_steps=30,
+    phase="操作中",
+    last_action="click"
+)
+
+# 終了時
+indicator.stop()
+```
+
+---
+
 ## src.debug モジュール
 
 #### `save_model_debug_image(*, sent_image_path: Path, step: int, response_obj) -> Path | None`
