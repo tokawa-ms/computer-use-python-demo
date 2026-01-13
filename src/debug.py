@@ -20,11 +20,11 @@ from .session import _summarize_action_for_log
 def _build_debug_note(*, step: int, response_obj) -> str:
     """
     デバッグノートを構築します。
-    
+
     Args:
         step: ステップ番号
         response_obj: レスポンスオブジェクト
-    
+
     Returns:
         デバッグノートの文字列
     """
@@ -48,11 +48,11 @@ def _build_debug_note(*, step: int, response_obj) -> str:
 def _build_debug_note_summary(*, step: int, response_obj) -> str:
     """
     デバッグ画像用の短いノートを構築します。
-    
+
     Args:
         step: ステップ番号
         response_obj: レスポンスオブジェクト
-    
+
     Returns:
         短縮されたデバッグノートの文字列
     """
@@ -63,19 +63,25 @@ def _build_debug_note_summary(*, step: int, response_obj) -> str:
     return full[:DEBUG_NOTE_IMAGE_MAX_CHARS] + "…"
 
 
-def _write_debug_text_file(*, image_path: Path, step: int, response_obj) -> Path:
+def _write_debug_text_file(
+    *,
+    image_path: Path,
+    step: int,
+    response_obj,
+    output_path: Path | None = None,
+) -> Path:
     """
     デバッグ用のテキストファイルを書き込みます。
-    
+
     Args:
         image_path: 関連する画像のパス
         step: ステップ番号
         response_obj: レスポンスオブジェクト
-    
+
     Returns:
         作成されたテキストファイルのパス
     """
-    txt_path = image_path.with_name(f"{image_path.stem}_Debug.txt")
+    txt_path = output_path or image_path.with_name(f"{image_path.stem}_Debug.txt")
     note = _build_debug_note(step=step, response_obj=response_obj)
     if len(note) > DEBUG_TEXT_FILE_MAX_CHARS:
         note = note[:DEBUG_TEXT_FILE_MAX_CHARS] + "…"
@@ -83,19 +89,41 @@ def _write_debug_text_file(*, image_path: Path, step: int, response_obj) -> Path
     return txt_path
 
 
+def save_model_debug_text(
+    *, sent_image_path: Path, step: int, response_obj, output_path: Path | None = None
+) -> Path | None:
+    """モデルレスポンスの指示内容を、送信画像に紐づく Debug.txt として保存します。"""
+    if sent_image_path is None:
+        return None
+    if not sent_image_path.exists():
+        return None
+    try:
+        txt_path = _write_debug_text_file(
+            image_path=sent_image_path,
+            step=step,
+            response_obj=response_obj,
+            output_path=output_path,
+        )
+        print(f"[{step}] Debug log saved: {txt_path}")
+        return txt_path
+    except Exception as e:
+        print(f"[{step}] Failed to save debug log: {e}")
+        return None
+
+
 def save_model_debug_image(
     *, sent_image_path: Path, step: int, response_obj
 ) -> Path | None:
     """
     モデルレスポンス用のデバッグ画像を保存します。
-    
+
     送信された画像にデバッグ情報をオーバーレイして保存します。
-    
+
     Args:
         sent_image_path: モデルに送信された画像のパス
         step: ステップ番号
         response_obj: レスポンスオブジェクト
-    
+
     Returns:
         デバッグ画像のパス、保存されなかった場合は None
     """
@@ -103,18 +131,15 @@ def save_model_debug_image(
         return None
     if not sent_image_path.exists():
         return None
-    
+
     out_path = sent_image_path.with_name(
         f"{sent_image_path.stem}_Debug{sent_image_path.suffix}"
     )
-    
-    try:
-        txt_path = _write_debug_text_file(
-            image_path=sent_image_path, step=step, response_obj=response_obj
-        )
-        print(f"[{step}] Debug log saved: {txt_path}")
-    except Exception as e:
-        print(f"[{step}] Failed to save debug log: {e}")
+
+    # 互換のため残す（メインでは通常 save_model_debug_text を使う）
+    save_model_debug_text(
+        sent_image_path=sent_image_path, step=step, response_obj=response_obj
+    )
 
     note = _build_debug_note_summary(step=step, response_obj=response_obj)
     return annotate_text(sent_image_path, note, output_path=out_path)
