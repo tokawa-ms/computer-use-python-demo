@@ -7,7 +7,7 @@
 ## ディレクトリ構造
 
 ```
-202501-computer-use-test/
+computer-use-python-demo/
 ├── computer-use-test.py      # メインエントリーポイント（後方互換性用）
 ├── src/                       # ソースコードディレクトリ
 │   ├── __init__.py           # パッケージ初期化
@@ -29,6 +29,7 @@
 ├── .env                       # 環境変数ファイル（Git管理外）
 ├── .env.example              # 環境変数のサンプル
 ├── requirements.txt          # Python依存関係
+├── LICENSE                   # MIT ライセンス
 └── README.md                 # プロジェクト概要
 ```
 
