@@ -25,7 +25,7 @@ def perform_click(
     display_width: int,
     display_height: int,
     button: str | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """
     指定された座標でマウスクリックを実行します。
 
@@ -39,7 +39,7 @@ def perform_click(
         button: クリックするボタン ("left", "right", "middle")
 
     Returns:
-        実際にクリックされたスクリーン座標 (px, py)
+        (px, py, screen_w, screen_h)
     """
     screen_w, screen_h = get_primary_screen_size()
     px, py = scale_point(
@@ -51,7 +51,7 @@ def perform_click(
         to_height=screen_h,
     )
     pyautogui.click(px, py, button=normalize_mouse_button(button))
-    return px, py
+    return px, py, screen_w, screen_h
 
 
 def perform_double_click(
@@ -61,7 +61,7 @@ def perform_double_click(
     display_width: int,
     display_height: int,
     button: str | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """
     指定された座標でマウスダブルクリックを実行します。
 
@@ -73,7 +73,7 @@ def perform_double_click(
         button: クリックするボタン ("left", "right", "middle")
 
     Returns:
-        実際にクリックされたスクリーン座標 (px, py)
+        (px, py, screen_w, screen_h)
     """
     screen_w, screen_h = get_primary_screen_size()
     px, py = scale_point(
@@ -85,7 +85,7 @@ def perform_double_click(
         to_height=screen_h,
     )
     pyautogui.doubleClick(px, py, button=normalize_mouse_button(button))
-    return px, py
+    return px, py, screen_w, screen_h
 
 
 def perform_move(
@@ -95,7 +95,7 @@ def perform_move(
     display_width: int,
     display_height: int,
     duration: float = 0.0,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """
     マウスカーソルを指定された座標に移動します。
 
@@ -107,7 +107,7 @@ def perform_move(
         duration: 移動にかける時間（秒）
 
     Returns:
-        実際の移動先スクリーン座標 (px, py)
+        (px, py, screen_w, screen_h)
     """
     screen_w, screen_h = get_primary_screen_size()
     px, py = scale_point(
@@ -119,7 +119,7 @@ def perform_move(
         to_height=screen_h,
     )
     pyautogui.moveTo(px, py, duration=duration)
-    return px, py
+    return px, py, screen_w, screen_h
 
 
 def perform_drag(
@@ -129,7 +129,7 @@ def perform_drag(
     display_height: int,
     duration: float = 0.2,
     button: str | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """
     マウスドラッグ操作を実行します。
 
@@ -143,7 +143,7 @@ def perform_drag(
         button: ドラッグに使用するボタン
 
     Returns:
-        ドラッグ終了時のスクリーン座標 (px, py)
+        (px, py, screen_w, screen_h)
 
     Raises:
         ValueError: パスが空または2点未満の場合
@@ -192,7 +192,7 @@ def perform_drag(
         last_x, last_y = px, py
 
     pyautogui.mouseUp(button=normalize_mouse_button(button))
-    return last_x, last_y
+    return last_x, last_y, screen_w, screen_h
 
 
 def perform_scroll(
@@ -203,7 +203,7 @@ def perform_scroll(
     display_height: int,
     scroll_x: int = 0,
     scroll_y: int = 0,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """
     指定された座標でスクロール操作を実行します。
 
@@ -216,16 +216,16 @@ def perform_scroll(
         scroll_y: 縦スクロール量
 
     Returns:
-        スクロール位置のスクリーン座標 (px, py)
+        (px, py, screen_w, screen_h)
     """
-    px, py = perform_move(
+    px, py, screen_w, screen_h = perform_move(
         x, y, display_width=display_width, display_height=display_height
     )
     if isinstance(scroll_y, int) and scroll_y:
         pyautogui.scroll(scroll_y)
     if isinstance(scroll_x, int) and scroll_x:
         pyautogui.hscroll(scroll_x)
-    return px, py
+    return px, py, screen_w, screen_h
 
 
 def perform_type(text: str, *, interval: float = 0.0) -> None:

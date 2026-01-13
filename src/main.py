@@ -20,7 +20,7 @@ from .config import (
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
     EVIDENCE_BEFORE_AFTER_FOR_INPUT,
-    IME_GUIDANCE_TEMPLATE,
+    GUIDANCE_TEMPLATE,
     MAX_STEPS,
     SCREENSHOTS_DIR,
     _env,
@@ -107,6 +107,39 @@ def execute_action(
     """
     screenshot_path: Path | None = None
 
+    def _format_pointer_debug(
+        *,
+        model_x: int,
+        model_y: int,
+        model_w: int,
+        model_h: int,
+        px: int,
+        py: int,
+        screen_w: int,
+        screen_h: int,
+    ) -> str:
+        mx = max(1, int(model_w))
+        my = max(1, int(model_h))
+        sx = max(1, int(screen_w))
+        sy = max(1, int(screen_h))
+
+        model_max_x = mx - 1
+        model_max_y = my - 1
+        screen_max_x = sx - 1
+        screen_max_y = sy - 1
+
+        model_rx = model_x / mx
+        model_ry = model_y / my
+        screen_rx = px / sx
+        screen_ry = py / sy
+
+        return (
+            f"model_ratio=({model_x}/{mx}={model_rx:.4f},{model_y}/{my}={model_ry:.4f}) "
+            f"model_max=({model_max_x},{model_max_y}) "
+            f"screen_ratio=({px}/{sx}={screen_rx:.4f},{py}/{sy}={screen_ry:.4f}) "
+            f"screen_max=({screen_max_x},{screen_max_y})"
+        )
+
     if action_type == "screenshot":
         # スクリーンショットの撮影
         screenshot_path = image_processing.capture_fullscreen_screenshot(
@@ -123,21 +156,33 @@ def execute_action(
         if not isinstance(x, int) or not isinstance(y, int):
             raise ValueError(f"Invalid click coordinates: x={x} y={y}")
 
-        px, py = actions.perform_click(
+        px, py, screen_w, screen_h = actions.perform_click(
             x,
             y,
             display_width=DISPLAY_WIDTH,
             display_height=DISPLAY_HEIGHT,
             button=button,
         )
+        debug = _format_pointer_debug(
+            model_x=x,
+            model_y=y,
+            model_w=DISPLAY_WIDTH,
+            model_h=DISPLAY_HEIGHT,
+            px=px,
+            py=py,
+            screen_w=screen_w,
+            screen_h=screen_h,
+        )
         if isinstance(button, str) and button:
-            print(f"[{step}] Clicked ({button}): model=({x},{y}) -> screen=({px},{py})")
+            print(
+                f"[{step}] Clicked ({button}): model=({x},{y}) -> screen=({px},{py}) {debug}"
+            )
         else:
-            print(f"[{step}] Clicked: model=({x},{y}) -> screen=({px},{py})")
+            print(f"[{step}] Clicked: model=({x},{y}) -> screen=({px},{py}) {debug}")
         session.log_session_event(
             step=step,
             kind="action",
-            detail=f"click button={button} model=({x},{y}) screen=({px},{py})",
+            detail=f"click button={button} model=({x},{y}) screen=({px},{py}) {debug}",
         )
         time.sleep(0.2)
 
@@ -163,14 +208,24 @@ def execute_action(
         if not isinstance(x, int) or not isinstance(y, int):
             raise ValueError(f"Invalid double_click coordinates: x={x} y={y}")
 
-        px, py = actions.perform_double_click(
+        px, py, screen_w, screen_h = actions.perform_double_click(
             x, y, display_width=DISPLAY_WIDTH, display_height=DISPLAY_HEIGHT
         )
-        print(f"[{step}] Double-clicked: model=({x},{y}) -> screen=({px},{py})")
+        debug = _format_pointer_debug(
+            model_x=x,
+            model_y=y,
+            model_w=DISPLAY_WIDTH,
+            model_h=DISPLAY_HEIGHT,
+            px=px,
+            py=py,
+            screen_w=screen_w,
+            screen_h=screen_h,
+        )
+        print(f"[{step}] Double-clicked: model=({x},{y}) -> screen=({px},{py}) {debug}")
         session.log_session_event(
             step=step,
             kind="action",
-            detail=f"double_click model=({x},{y}) screen=({px},{py})",
+            detail=f"double_click model=({x},{y}) screen=({px},{py}) {debug}",
         )
         time.sleep(0.2)
 
@@ -195,14 +250,24 @@ def execute_action(
         if not isinstance(x, int) or not isinstance(y, int):
             raise ValueError(f"Invalid move coordinates: x={x} y={y}")
 
-        px, py = actions.perform_move(
+        px, py, screen_w, screen_h = actions.perform_move(
             x, y, display_width=DISPLAY_WIDTH, display_height=DISPLAY_HEIGHT
         )
-        print(f"[{step}] Moved: model=({x},{y}) -> screen=({px},{py})")
+        debug = _format_pointer_debug(
+            model_x=x,
+            model_y=y,
+            model_w=DISPLAY_WIDTH,
+            model_h=DISPLAY_HEIGHT,
+            px=px,
+            py=py,
+            screen_w=screen_w,
+            screen_h=screen_h,
+        )
+        print(f"[{step}] Moved: model=({x},{y}) -> screen=({px},{py}) {debug}")
         session.log_session_event(
             step=step,
             kind="action",
-            detail=f"move model=({x},{y}) screen=({px},{py})",
+            detail=f"move model=({x},{y}) screen=({px},{py}) {debug}",
         )
         time.sleep(0.1)
 
@@ -217,12 +282,34 @@ def execute_action(
         if not isinstance(path, list) or not path:
             raise ValueError(f"Invalid drag path: {path}")
 
-        px, py = actions.perform_drag(
+        px, py, screen_w, screen_h = actions.perform_drag(
             path, display_width=DISPLAY_WIDTH, display_height=DISPLAY_HEIGHT
         )
-        print(f"[{step}] Dragged; ended at screen=({px},{py})")
+        # drag は path 終点のスクリーン座標を返すが、モデル座標側は path の最後を比率表示に使う
+        last = path[-1]
+        if isinstance(last, dict):
+            model_x = last.get("x")
+            model_y = last.get("y")
+        else:
+            model_x = getattr(last, "x", None)
+            model_y = getattr(last, "y", None)
+        if not isinstance(model_x, int):
+            model_x = 0
+        if not isinstance(model_y, int):
+            model_y = 0
+        debug = _format_pointer_debug(
+            model_x=model_x,
+            model_y=model_y,
+            model_w=DISPLAY_WIDTH,
+            model_h=DISPLAY_HEIGHT,
+            px=px,
+            py=py,
+            screen_w=screen_w,
+            screen_h=screen_h,
+        )
+        print(f"[{step}] Dragged; ended at screen=({px},{py}) {debug}")
         session.log_session_event(
-            step=step, kind="action", detail=f"drag ended_screen=({px},{py})"
+            step=step, kind="action", detail=f"drag ended_screen=({px},{py}) {debug}"
         )
         time.sleep(0.2)
 
@@ -244,7 +331,7 @@ def execute_action(
                 f"Invalid scroll values: scroll_x={scroll_x} scroll_y={scroll_y}"
             )
 
-        px, py = actions.perform_scroll(
+        px, py, screen_w, screen_h = actions.perform_scroll(
             x,
             y,
             display_width=DISPLAY_WIDTH,
@@ -252,11 +339,23 @@ def execute_action(
             scroll_x=scroll_x,
             scroll_y=scroll_y,
         )
-        print(f"[{step}] Scrolled at screen=({px},{py}) x={scroll_x} y={scroll_y}")
+        debug = _format_pointer_debug(
+            model_x=x,
+            model_y=y,
+            model_w=DISPLAY_WIDTH,
+            model_h=DISPLAY_HEIGHT,
+            px=px,
+            py=py,
+            screen_w=screen_w,
+            screen_h=screen_h,
+        )
+        print(
+            f"[{step}] Scrolled at screen=({px},{py}) x={scroll_x} y={scroll_y} {debug}"
+        )
         session.log_session_event(
             step=step,
             kind="action",
-            detail=f"scroll at_screen=({px},{py}) scroll_x={scroll_x} scroll_y={scroll_y}",
+            detail=f"scroll at_screen=({px},{py}) scroll_x={scroll_x} scroll_y={scroll_y} {debug}",
         )
         time.sleep(0.2)
 
@@ -413,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
             model=confirmation.COMPUTER_USE_MODEL,
             tools=client.make_tools("windows"),
             input=[
-                {"role": "system", "content": IME_GUIDANCE_TEMPLATE},
+                {"role": "system", "content": GUIDANCE_TEMPLATE},
                 {"role": "user", "content": user_instruction},
             ],
             truncation="auto",
