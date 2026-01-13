@@ -13,13 +13,14 @@ Azure OpenAI の computer-use（Windows 操作）を試すためのスクリプ�
   - `AZURE_OPENAI_ENDPOINT`（例: `https://<resource>.openai.azure.com`）
   - `AZURE_OPENAI_MODEL_COMPUTER_USE` / `AZURE_OPENAI_MODEL_SUMMARY` / `AZURE_OPENAI_MODEL_CONFIRM`
     - いずれも **Azure OpenAI のデプロイ名**です
-  - `TARGET_RECIPIENT` / `TARGET_MESSAGE`（または CLI 引数）
+  - `TARGET_MESSAGE`（computer-use への **直接指示**。または CLI 引数）
 
 ## 実行
 
 - 例（CLI 引数で指定）:
-  - `python computer-use-test.py --recipient "<name>" --message "<text>"`
+  - `python computer-use-test.py --message "<instruction>"`
 
 ## 注意
 
 - `screenshots/` や `*-sessionsummary.txt` はローカル出力で、内容に機微情報が含まれ得ます。GitHub へはアップロードしないでください。
+- `*-sessionsummary.txt` に入力したテキスト内容も記録されます（`.env.example` の `LOG_TYPED_TEXT_IN_SESSION_SUMMARY`）。機微情報を扱う場合は `false` にしてください。

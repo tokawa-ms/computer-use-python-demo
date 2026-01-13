@@ -38,6 +38,13 @@ def _env(name: str, default: str | None = None) -> str | None:
     return v if v else default
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    v = _env(name)
+    if v is None:
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "y", "on")
+
+
 def _require_env(name: str) -> str:
     v = _env(name)
     if v is None:
@@ -297,6 +304,14 @@ def choose_model_image(clean: Path, annotated: Path | None = None) -> Path:
     return clean
 
 
+def _format_typed_text_for_log(text: str, *, max_chars: int = 200) -> str:
+    compact = text.replace("\r\n", "\n").replace("\r", "\n")
+    compact = compact.replace("\n", "\\n")
+    if len(compact) > max_chars:
+        compact = compact[:max_chars] + "…"
+    return compact
+
+
 def _summarize_action_for_debug(action) -> str:
     action_type = getattr(action, "type", None)
     if not isinstance(action_type, str):
@@ -324,6 +339,9 @@ def _summarize_action_for_debug(action) -> str:
     if action_type == "type":
         text = getattr(action, "text", "")
         ln = len(text) if isinstance(text, str) else "?"
+        if isinstance(text, str):
+            preview = _format_typed_text_for_log(text)
+            return f"action: type text_len={ln} text='{preview}'"
         return f"action: type text_len={ln}"
 
     if action_type == "keypress":
@@ -813,7 +831,7 @@ SESSION_SUMMARY_MAX_OUTPUT_TOKENS = 256
 
 # If True, logs the actual typed text into the session summary file.
 # WARNING: This may record sensitive data.
-LOG_TYPED_TEXT_IN_SESSION_SUMMARY = False
+LOG_TYPED_TEXT_IN_SESSION_SUMMARY = _env_bool("LOG_TYPED_TEXT_IN_SESSION_SUMMARY", True)
 SESSION_SUMMARY_TYPED_TEXT_MAX_CHARS = 200
 
 _SESSION_START_DT = datetime.now()
@@ -965,11 +983,9 @@ def _summarize_text_with_nano_for_session(text: str) -> str:
 def _format_typed_text_for_session(text: str) -> str:
     """Formats typed text for safe single-line-ish logging."""
 
-    compact = text.replace("\r\n", "\n").replace("\r", "\n")
-    compact = compact.replace("\n", "\\n")
-    if len(compact) > SESSION_SUMMARY_TYPED_TEXT_MAX_CHARS:
-        compact = compact[:SESSION_SUMMARY_TYPED_TEXT_MAX_CHARS] + "…"
-    return compact
+    return _format_typed_text_for_log(
+        text, max_chars=SESSION_SUMMARY_TYPED_TEXT_MAX_CHARS
+    )
 
 
 def log_session_event(*, step: int, kind: str, detail: str) -> None:
@@ -1061,35 +1077,21 @@ def _init_runtime_from_env() -> None:
     _init_openai_client_from_env()
 
 
-def _build_initial_user_instruction(
-    *, recipient: str, message: str, app_name: str
-) -> str:
-    return f"{app_name} で {recipient} さんに、「{message}」とチャットメッセージを送ってください。"
+def _build_initial_user_instruction(*, message: str) -> str:
+    # Treat TARGET_MESSAGE as a direct instruction for computer-use.
+    # Keep it as-is (no wrapping) so the user can express arbitrary tasks.
+    return message
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Azure OpenAI computer-use runner")
     parser.add_argument(
-        "--recipient",
-        default=_env("TARGET_RECIPIENT"),
-        help="Chat recipient (e.g. display name). You can also set TARGET_RECIPIENT in .env",
-    )
-    parser.add_argument(
         "--message",
         default=_env("TARGET_MESSAGE"),
-        help="Message to send. You can also set TARGET_MESSAGE in .env",
-    )
-    parser.add_argument(
-        "--app",
-        default=_env("TARGET_APP", "Microsoft Teams"),
-        help="Target app name (default: Microsoft Teams). You can also set TARGET_APP in .env",
+        help="Direct instruction for computer-use. You can also set TARGET_MESSAGE in .env",
     )
     args = parser.parse_args(argv)
 
-    if not args.recipient:
-        raise RuntimeError(
-            "Missing recipient. Set TARGET_RECIPIENT in .env or pass --recipient."
-        )
     if not args.message:
         raise RuntimeError(
             "Missing message. Set TARGET_MESSAGE in .env or pass --message."
@@ -1100,9 +1102,7 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError("COMPUTER_USE_MODEL is not set (unexpected).")
 
     user_instruction = _build_initial_user_instruction(
-        recipient=str(args.recipient),
         message=str(args.message),
-        app_name=str(args.app),
     )
 
     response = responses_create_with_retry(
@@ -1300,17 +1300,12 @@ def main(argv: list[str] | None = None) -> int:
 
             perform_type(text)
             print(f"[{step}] Typed {len(text)} chars")
-            if LOG_TYPED_TEXT_IN_SESSION_SUMMARY:
-                logged = _format_typed_text_for_session(text)
-                log_session_event(
-                    step=step,
-                    kind="action",
-                    detail=f"type chars={len(text)} text='{logged}'",
-                )
-            else:
-                log_session_event(
-                    step=step, kind="action", detail=f"type chars={len(text)}"
-                )
+            logged = _format_typed_text_for_session(text)
+            log_session_event(
+                step=step,
+                kind="action",
+                detail=f"type chars={len(text)} text='{logged}'",
+            )
             time.sleep(0.5)
 
             after_path = capture_fullscreen_screenshot(screenshots_dir=SCREENSHOTS_DIR)
