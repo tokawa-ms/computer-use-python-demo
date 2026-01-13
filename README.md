@@ -61,9 +61,9 @@ cp .env.example .env
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 
 # Azure OpenAI モデルのデプロイ名
-AZURE_OPENAI_MODEL_COMPUTER_USE=gpt-4o-computer-use
-AZURE_OPENAI_MODEL_SUMMARY=gpt-4o-mini
-AZURE_OPENAI_MODEL_CONFIRM=gpt-4o-mini
+AZURE_OPENAI_MODEL_COMPUTER_USE=computer-use-preview
+AZURE_OPENAI_MODEL_SUMMARY=gpt-4.1-mini
+AZURE_OPENAI_MODEL_CONFIRM=gpt-4.1-mini
 
 # 実行するタスク（または --message で指定）
 TARGET_MESSAGE=メモ帳を開いて「Hello, World!」と入力してください
