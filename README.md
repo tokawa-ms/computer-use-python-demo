@@ -5,10 +5,10 @@ Azure OpenAI の computer-use 機能を使用して Windows 環境を自動操�
 ## 特徴
 
 - **モジュール化された構造**: 保守性と拡張性に優れた設計
-- **詳細な日本語コメント**: すべての関数に日本語のdocstringを完備
+- **詳細な日本語コメント**: すべての関数に日本語の docstring を完備
 - **包括的なドキュメント**: アーキテクチャ、API、使用方法を網羅
 - **自動リトライ**: API エラー、レート制限、接続エラーに自動対応
-- **セッション管理**: 実行ログとAIによる要約を自動記録
+- **セッション管理**: 実行ログと AI による要約を自動記録
 
 ## プロジェクト構成
 
@@ -89,7 +89,7 @@ python computer-use-test.py --message "メモ帳を開いてください"
 詳細な情報は `docs/` ディレクトリを参照してください：
 
 - **[architecture.md](docs/architecture.md)**: システムアーキテクチャ、モジュール構成、データフロー
-- **[api_reference.md](docs/api_reference.md)**: 全関数の完全なAPIリファレンス
+- **[api_reference.md](docs/api_reference.md)**: 全関数の完全な API リファレンス
 - **[usage.md](docs/usage.md)**: 詳細なセットアップ手順、実行例、トラブルシューティング
 
 ## 主要機能
@@ -111,15 +111,29 @@ python computer-use-test.py --message "メモ帳を開いてください"
 ### セッション管理
 
 - タイムスタンプ付きイベントログ
-- AIモデルによるレスポンスの自動要約
+- AI モデルによるレスポンスの自動要約
 - デバッグ用詳細ログ
 
 ### 確認処理
 
 - ヒューリスティック判定による確認要求の検出
-- AIモデルによる確認要求の判定
+- AI モデルによる確認要求の判定
 - リスク用語の自動検出と手動確認要求
 - 自動確認メッセージの送信
+
+### ステータス表示（任意）
+
+実行中に、画面右上へ小さなインジケーター（常時最前面・枠なし）を表示できます。
+
+- 有効化: `.env` に `ENABLE_STATUS_INDICATOR=true`
+- 表示内容: `Step/Max`、フェーズ（API 待ち/操作中/確認中）、直近アクション、経過時間
+
+調整（任意）:
+
+- クリック透過（誤クリック防止）: `STATUS_INDICATOR_CLICK_THROUGH=true`（Windows）
+- 位置: `STATUS_INDICATOR_POSITION=top-right|top-left|bottom-right|bottom-left`
+- オフセット: `STATUS_INDICATOR_OFFSET_X` / `STATUS_INDICATOR_OFFSET_Y`
+- 見た目: `STATUS_INDICATOR_OPACITY`、`STATUS_INDICATOR_WIDTH/HEIGHT`、`STATUS_INDICATOR_FONT_FAMILY/SIZE`
 
 ## セキュリティ
 
@@ -160,6 +174,6 @@ python -m py_compile src/*.py computer-use-test.py
 
 ## 注意事項
 
-- このツールはWindows専用です
-- PyAutoGUIのFAILSAFE機能により、マウスを画面の隅に移動すると緊急停止します
-- 最大ステップ数はデフォルトで30です（`src/config.py` で変更可能）
+- このツールは Windows 専用です
+- PyAutoGUI の FAILSAFE 機能により、マウスを画面の隅に移動すると緊急停止します
+- 最大ステップ数はデフォルトで 30 です（`src/config.py` で変更可能）
