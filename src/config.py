@@ -25,11 +25,11 @@ if load_dotenv is not None:
 def _env(name: str, default: str | None = None) -> str | None:
     """
     環境変数を取得します。
-    
+
     Args:
         name: 環境変数名
         default: デフォルト値（環境変数が設定されていない場合）
-    
+
     Returns:
         環境変数の値、または設定されていない場合はデフォルト値
     """
@@ -43,11 +43,11 @@ def _env(name: str, default: str | None = None) -> str | None:
 def _env_bool(name: str, default: bool = False) -> bool:
     """
     環境変数をブール値として取得します。
-    
+
     Args:
         name: 環境変数名
         default: デフォルト値
-    
+
     Returns:
         環境変数の値をブール値に変換した結果
         "1", "true", "yes", "y", "on" はTrue、それ以外はFalse
@@ -58,16 +58,38 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return v.strip().lower() in ("1", "true", "yes", "y", "on")
 
 
+def _env_int(name: str, default: int) -> int:
+    """環境変数を整数として取得します（不正な場合は default）。"""
+    v = _env(name)
+    if v is None:
+        return int(default)
+    try:
+        return int(str(v).strip())
+    except Exception:
+        return int(default)
+
+
+def _env_float(name: str, default: float) -> float:
+    """環境変数を浮動小数として取得します（不正な場合は default）。"""
+    v = _env(name)
+    if v is None:
+        return float(default)
+    try:
+        return float(str(v).strip())
+    except Exception:
+        return float(default)
+
+
 def _require_env(name: str) -> str:
     """
     必須の環境変数を取得します。設定されていない場合はエラーを発生させます。
-    
+
     Args:
         name: 環境変数名
-    
+
     Returns:
         環境変数の値
-    
+
     Raises:
         RuntimeError: 環境変数が設定されていない場合
     """
@@ -83,15 +105,15 @@ def _require_env(name: str) -> str:
 def _build_azure_openai_base_url() -> str:
     """
     Azure OpenAIのベースURLを構築します。
-    
+
     環境変数から以下の優先順位でURLを構築します：
     1. AZURE_OPENAI_BASE_URL
     2. AZURE_OPENAI_ENDPOINT
     3. AZURE_OPENAI_RESOURCE_NAME
-    
+
     Returns:
         Azure OpenAIのベースURL
-    
+
     Raises:
         RuntimeError: 必要な環境変数が設定されていない場合
     """
@@ -166,6 +188,25 @@ SESSION_SUMMARY_MAX_OUTPUT_TOKENS = 256
 # 警告: 機密情報が記録される可能性があります
 LOG_TYPED_TEXT_IN_SESSION_SUMMARY = _env_bool("LOG_TYPED_TEXT_IN_SESSION_SUMMARY", True)
 SESSION_SUMMARY_TYPED_TEXT_MAX_CHARS = 200
+
+# 実行中ステータスインジケーター（右上小窓）
+# Tkinter で小さな常時最前面ウィンドウを表示し、簡易ステータスを出します。
+ENABLE_STATUS_INDICATOR = _env_bool("ENABLE_STATUS_INDICATOR", False)
+
+# インジケーターの見た目/挙動の調整（任意）
+STATUS_INDICATOR_OPACITY = _env_float("STATUS_INDICATOR_OPACITY", 0.78)
+STATUS_INDICATOR_WIDTH = _env_int("STATUS_INDICATOR_WIDTH", 280)
+STATUS_INDICATOR_HEIGHT = _env_int("STATUS_INDICATOR_HEIGHT", 92)
+STATUS_INDICATOR_MARGIN = _env_int("STATUS_INDICATOR_MARGIN", 12)
+STATUS_INDICATOR_POLL_MS = _env_int("STATUS_INDICATOR_POLL_MS", 120)
+STATUS_INDICATOR_FONT_FAMILY = _env("STATUS_INDICATOR_FONT_FAMILY", "Segoe UI")
+STATUS_INDICATOR_FONT_SIZE = _env_int("STATUS_INDICATOR_FONT_SIZE", 9)
+# top-right / top-left / bottom-right / bottom-left
+STATUS_INDICATOR_POSITION = _env("STATUS_INDICATOR_POSITION", "top-right")
+STATUS_INDICATOR_OFFSET_X = _env_int("STATUS_INDICATOR_OFFSET_X", 12)
+STATUS_INDICATOR_OFFSET_Y = _env_int("STATUS_INDICATOR_OFFSET_Y", 12)
+# True にするとクリックを背面に通し、フォーカスを奪いにくくします（Windowsで有効）
+STATUS_INDICATOR_CLICK_THROUGH = _env_bool("STATUS_INDICATOR_CLICK_THROUGH", True)
 
 # 確認インタープリターモデルの使用
 # メッセージがユーザー確認を求めているかどうかを判定するために軽量モデルを使用するかどうか
